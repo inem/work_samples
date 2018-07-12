@@ -26,8 +26,11 @@ end
 class StockService
   def self.financial_update!(stock)
     last_updated_on = stock.financials.first.date.to_date
+    
     latest_financial_data = StockDataApi.new(stock.symbol, {start_date: last_updated_on, end_date: Date.today-1}).financial_history
+
     fresh_financial_data = latest_financial_data.delete_if { |data| data[:date].to_date <= last_updated_on}
+    
     StockMutator.create_financials!(stock, fresh_financial_data)
   end
 end

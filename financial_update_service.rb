@@ -14,34 +14,34 @@
 
 
 class FinancialUpdateService
-  def initialize(stock)
-    @stock = stock
+  def initialize(stock_api = StockDataApi)
+    @stock_api = stock_api
   end
 
-  def run
-    set_last_updated_on
-    fetch_latest_financial_data
-    remove_duplicate_data
-    store_latest_financial_data  
+  def run(stock)
+    updated_on = last_updated_on(stock)
+    latest_financial_data = fetch_latest_financial_data(stock, updated_on)
+    financial_data = remove_duplicate_data(latest_financial_data, updated_on)
+    store_latest_financial_data(stock, financial_data)
   end
 
   private
   
-  def set_last_updated_on
-    @last_updated_on = @stock.financials.first.date.to_date
+  def last_updated_on(stock)
+    stock.financials.first.date.to_date
   end
 
-  def fetch_latest_financial_data
-    @latest_financial_data = StockDataApi.new(@stock.symbol, {start_date: @last_updated_on, end_date: Date.today-1}).financial_history
+  def fetch_latest_financial_data(stock, updated_on)
+    @stock_api.new(stock.symbol, {start_date: updated_on, end_date: Date.today-1}).financial_history
   end
 
-  def remove_duplicate_data
-    @latest_financial_data.delete_if { |data| data[:date].to_date <= @last_updated_on}
+  def remove_duplicate_data(financial_data, updated_on)
+    financial_data.delete_if { |data| data[:date].to_date <= updated_on}
   end
 
-  def store_latest_financial_data
-    @latest_financial_data.each do |d| 
-      @stock.financials.create(adj_close: d.fetch(:adj_close), close: d.fetch(:close),
+  def store_latest_financial_data(stock, financial_data)
+    financial_data.each do |d| 
+      stock.financials.create(adj_close: d.fetch(:adj_close), close: d.fetch(:close),
       date: d.fetch(:date).to_time, high: d.fetch(:high), low: d.fetch(:low), open: d.fetch(:open),
       volume: d.fetch(:volume))
     end
